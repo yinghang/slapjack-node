@@ -1,0 +1,152 @@
+extends layout
+
+block content
+  .navbar.navbar-warning
+        .container-fluid
+          .navbar-header
+            button.navbar-toggle(type='button', data-toggle='collapse', data-target='.navbar-warning-collapse')
+              span.icon-bar
+              span.icon-bar
+              span.icon-bar
+            a.navbar-brand(href='javascript:void(0)') Slapjack
+          .navbar-collapse.collapse.navbar-warning-collapse
+  
+  .container
+    .container-top
+     h1 Slapjack
+     a#startGame.btn.btn-raised.btn-danger(href='javascript:void(0)', onclick='start()') Start Game
+     a.btn.btn-raised.btn-danger(href='javascript:void(0)', onclick='playCard()') Play Card
+     a.btn.btn-raised.btn-primary(href='javascript:void(0)', onclick='slap()')
+        | Slap!
+        .ripple-container
+     #messages-container
+     ul#list
+       li.username Playing as:
+       li.players Players in a game:
+       li.current 's turn:
+       li.handSize Hand size:
+       li.pileSize Pile size:
+    #container-card
+
+    script(src='/socket.io/socket.io.js')
+    script.
+        var socket = io();
+        var username = "";
+        var id = "";
+
+        socket.on('connect', function() {
+        console.log('connected');
+        });
+
+        socket.on('username', function(data) {
+        if (!data) {
+        username = prompt("Enter your username!");
+        socket.emit('username', username);
+        } else {
+        id = data;
+        }
+        $('.username').text('Playing as: '+username)
+        });
+
+        socket.on('playCard', function(data) {
+        console.log('card play recieved');
+        var arr = parseCard(data.card);
+        var html = window.cardTemplate({blah: {"suit":arr[0], "rank":arr[1]}});
+        $("#container-card").html(html);
+        updateGameStatus(data.gameState);
+        });
+
+        socket.on('slap', function(data) {
+        if (data.winning) {
+        $('#messages-container').text('YOU WON!')
+        $('#card').attr('src','')
+        } else {
+        $('#messages-container').text('You '+data.message)
+        $('#messages-container').fadeOut(3000)
+        }
+        });
+
+        socket.on('start', function(data) {
+        startGame();
+        updateGameStatus(data.gameState);
+        });
+
+        socket.on('updateGame', function(gameState){
+          updateGameStatus(gameState);
+        });
+
+        socket.on('message', function(data) {
+        console.log('message received')
+        $('#messages-container').text(data)
+        $('#messages-container').fadeOut(3000, function() {
+        $('#messages-container').text('')
+        $('#messages-container').css('display','block')
+        })
+        });
+
+        socket.on('disconnect', function() {
+        // refresh on disconnect
+        window.location = window.location;
+        });
+
+        function start() {
+        socket.emit('start');
+        startGame();
+        }
+
+        function startGame(){
+        $("#startGame").css("pointer-events", "none");
+        $("#startGame").css("opacity", "0.5");
+        $("#startGame").text("Game Started");
+        var html = window.cardTemplate({blah: {"suit":"Heart", "rank":"11"}});
+        console.log("success!");
+        $("#container-card").html(html);
+        }
+
+        function playCard() {
+        socket.emit('playCard');
+        }
+
+        function slap() {
+        socket.emit('slap');
+        }
+
+        function updateGameStatus(state){
+        $(".username").text('Playing as: '+username);
+        $(".players").text('Players in a game: '+state.playersInGame);
+        $(".current").text(state.current +"'s turn");
+        $(".handSize").text('Hand Size: '+state.handSize);
+        $(".pileSize").text('Pile Size: '+state.pileSize);
+        window.state = state;
+        }
+
+        function parseCard(data) {
+        var rank = ''
+        switch (data[0].value) {
+        case 0: rank+='1'
+        break
+        case 12: rank+='13'
+        break
+        case 11: rank+='12'
+        break
+        case 10: rank+='11'
+        break
+        default: rank+=(data[0].value+1)
+        }
+        var suit = ''
+        switch (data[0].suit) {
+        case 0: suit+='Spade'
+        break
+        case 1: suit+='Heart'
+        break
+        case 2: suit+='Diamond'
+        break
+        case 3: suit+='Club'
+        break
+        }
+        var arr = [];
+        arr.push(suit);
+        arr.push(rank);
+        console.log(arr)
+        return arr
+        }
