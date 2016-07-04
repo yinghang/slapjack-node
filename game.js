@@ -48,7 +48,7 @@ Game.prototype.addPlayer = function(username) {
     var newPlayer = new Player(username)
     this.playerOrder.push(newPlayer.id)
     this.players[newPlayer.id] = newPlayer
-    this.persist()
+    // this.persist()
     return newPlayer.id
   } else  {
     throw new Error()
@@ -58,14 +58,12 @@ Game.prototype.addPlayer = function(username) {
 
 // Use this.playerOrder and this.currentPlayer to figure out whose turn it is next!
 Game.prototype.nextPlayer = function() {
-  console.log('\nnext player called')
   if (!this.isStarted) {throw new Error()}
   var index = (this.playerOrder.indexOf(this.currentPlayer)+1)%this.playerOrder.length
   while (this.players[this.playerOrder[index]].pile.length===0) {
     index = (index+1)%this.playerOrder.length
   }
   this.currentPlayer = this.playerOrder[index]
-  console.log(this.currentPlayer)
 }; 
 
 /* Make sure to
@@ -74,7 +72,6 @@ Game.prototype.nextPlayer = function() {
   3. Distribute cards from the pile
 */
 Game.prototype.startGame = function() { 
-  console.log('\nstart game called')
   if (this.playerOrder.length<2) {
     throw new Error()
   }
@@ -98,13 +95,13 @@ Game.prototype.startGame = function() {
 
 // Check if the player with playerId is winning. In this case, that means he has the whole deck.
 Game.prototype.isWinning = function(playerId) {
-  if (!this.isStarted || this.currentPlayer !== playerId) {throw new Error()}
-  return this.players[this.currentPlayer].pile.length === 52
+  if (this.isStarted)
+    return this.players[this.currentPlayer].pile.length === 52
+  throw new Error()
 };
 
 // Play a card from the end of the pile
 Game.prototype.playCard = function(playerId) {
-  console.log('\nplay card called')
   if (!this.isStarted || this.players[this.currentPlayer].pile.length===0 || this.currentPlayer!==playerId) {throw new Error()}
   this.pile.push(this.players[this.currentPlayer].pile.pop())
   this.nextPlayer()
@@ -115,18 +112,26 @@ Game.prototype.playCard = function(playerId) {
 // clear the pile
 // remember invalid slap and you should lose 3 cards!!
 Game.prototype.slap = function(playerId) {
-  console.log('\nslap called')
   if (!this.isStarted) {throw new Error()}
-  console.log('past the error')
+  // no error, proceed
   var top = this.pile.slice(-3)
-  if (top[2].value===10 || top[2].value===top[1].value || top[0].value===top[2].value) {
-    this.players[playerId].pile.concat(_.shuffle(this.pile))
-    console.log('pile won!')
-    return {winning: this.isWinning(playerId), message:'got the pile!'}
-  } else {
-    console.log('cards lost!')
-    this.pile.concat(this.players[playerId].pile.splice(3,3))
-    return {winning:false, message:'lost three cards!'}
+  if (top.length>=1 && top[top.length-1].value===10 || // jack
+    (top.length>=2 && top[top.length-1].value===top[top.length-2].value) || // doubles
+    (top.length===3 && top[0].value===top[2].value)) { // sandwich
+    this.players[playerId].pile = this.players[playerId].pile.concat(this.pile)
+    this.pile = []
+    var numCards = _.mapObject(this.players, (function(player, playerId){
+      return player.pile.length;
+    }));
+    console.log(numCards)
+    return {winning: this.isWinning(playerId), message:'got the pile!', x:numCards}
+  } else { // wasn't a correct slap
+    this.pile = this.pile.concat(this.players[playerId].pile.splice(3,3))
+    var numCards = _.mapObject(this.players, (function(player, playerId){
+      return player.pile.length;
+    }));
+    console.log(numCards)
+    return {winning:false, message:'lost three cards!', x:numCards}
   }
 };
 

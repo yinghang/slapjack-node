@@ -1,5 +1,9 @@
 // "use strict";``
 var Game = require('./game');
+var Card = function(suit, value) {
+  this.value = value;
+  this.suit = suit;
+};
 
 describe("The Game Object", function() {
   describe(".addPlayer", function() {
@@ -140,6 +144,44 @@ describe("The Game Object", function() {
       expect(g.slap(j).winning).toEqual(jasmine.any(Boolean));
     });
     
+    it("should empty the pile after a slap", function() {      
+      var e = g.addPlayer('Ethan');
+      var j = g.addPlayer('Josh');
+      g.startGame();
+      g.playCard(e);
+      g.playCard(j);
+      g.playCard(e);
+      g.playCard(j);
+      g.playCard(e);
+      g.playCard(j);
+      g.playCard(e);
+      g.playCard(j);
+      g.pile.push(new Card(1,10))
+      g.slap(j);
+      expect(g.pile.length).toEqual(0);
+    })
+
+    it("doubles should work", function() {      
+      var e = g.addPlayer('Ethan');
+      var j = g.addPlayer('Josh');
+      g.startGame();
+      g.pile.push(new Card(1,3))
+      g.pile.push(new Card(1,3))
+      g.slap(j);
+      expect(g.pile.length).toEqual(0);
+    })
+
+    it("sandwich should work", function() {      
+      var e = g.addPlayer('Ethan');
+      var j = g.addPlayer('Josh');
+      g.startGame();
+      g.pile.push(new Card(1,12))
+      g.pile.push(new Card(1,1))
+      g.pile.push(new Card(1,12))
+      g.slap(j);
+      expect(g.pile.length).toEqual(0);
+    })
+
   });
 
   

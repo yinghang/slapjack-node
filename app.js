@@ -46,7 +46,7 @@ app.get('/', function(req, res) {
 // Here is your new Game!
 var Game = require('./game');
 var game = new Game();
-var slapped = false
+game.slapped = false
 
 function getGameState(){
   var numCards = {};
@@ -60,7 +60,8 @@ function getGameState(){
     players += player.username + ", ";
     return player.pile.length;
   }));
-
+  console.log(numCards)
+  if (currentPlayerUsername) currentPlayerUsername += '\'s turn'
   return {
     handSize: numCards || "You ain't got no cards yet!",
     current: currentPlayerUsername || "Game has not started yet!",
@@ -73,7 +74,6 @@ io.on('connection', function(socket){
   
   
   socket.emit('username', false);
-  
   // Try to add a player to the game. 
   // If you can't, emit('username', false), return out of callback
   // If you successfully add the player, emit ('username', id)
@@ -105,7 +105,7 @@ io.on('connection', function(socket){
     }
     socket.broadcast.emit('start', msg)
     socket.emit('start', {
-      gameState: getGameState()
+      gameState: getGameState(),
     });
 
     socket.broadcast.emit('start', {
@@ -116,7 +116,7 @@ io.on('connection', function(socket){
   
   // call game.playCard, emit the result the broadcast it 
   socket.on('playCard', function() {
-    slapped = false
+    game.slapped = false
     console.log('card play attempted')
     try {
       game.playCard(socket.playerId)
@@ -136,7 +136,7 @@ io.on('connection', function(socket){
 
   // Try to slap! Emit, broadcast, and handle errors accordingly 
   socket.on('slap', function() {
-    if (slapped) {return}
+    if (game.slapped) {return}
     console.log('*****first slap!')
     console.log(Math.random())
     try {
@@ -145,14 +145,15 @@ io.on('connection', function(socket){
       socket.emit('message',e)
       return
     }
-    slapped = true
+    game.slapped = true
     console.log(result)
+    console.log(result.message)
     socket.emit('slap',result)
     if (result.winning) {
-      socket.broadcast.emit('message',game.players[socket.playerId].username+'just won the game!')  
+      socket.broadcast.emit('message',game.players[socket.playerId].username+' just won the game!')  
     }
     else {
-      socket.broadcast.emit('message',game.players[socket.playerId].username+'just'+result.message)
+      socket.broadcast.emit('message',game.players[socket.playerId].username+' just'+result.message)
     }
   });
 
